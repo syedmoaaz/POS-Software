@@ -1,0 +1,22 @@
+{
+  "name": "mega-modern-pos",
+  "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "dev": "pnpm --filter @mms/web dev",
+    "dev:web": "pnpm --filter @mms/web dev",
+    "dev:api": "pnpm --filter @mms/api dev",
+    "dev:bridge": "pnpm --filter @mms/print-bridge dev",
+    "dev:all": "pnpm -r --parallel --filter @mms/web --filter @mms/api --filter @mms/print-bridge dev",
+    "build": "pnpm -r --filter @mms/web --filter @mms/api build",
+    "lint": "pnpm -r --filter @mms/web --filter @mms/api lint",
+    "typecheck": "pnpm -r --filter @mms/web --filter @mms/api --filter @mms/print-bridge typecheck",
+    "test": "pnpm --filter @mms/shared test && pnpm --filter @mms/api test",
+    "load:checkout": "node scripts/checkout-load.mjs",
+    "seed": "pnpm --filter @mms/api seed",
+    "preview": "pnpm --filter @mms/web preview"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

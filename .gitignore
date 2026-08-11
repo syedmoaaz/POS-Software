@@ -1,0 +1,20 @@
+node_modules
+dist
+build
+.turbo
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+coverage
+.vite
+.cookies*.txt
+apps/print-bridge/.output
+**/.tmp
+*.tsbuildinfo
+.pnpm-store
+
+apps/api/scripts/login.json
+apps/api/scripts/login-out.json
+WhatsApp Image*.jpeg
