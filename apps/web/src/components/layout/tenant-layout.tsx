@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
+import { isSuperAdminHost } from "@/lib/host";
 
 export function TenantLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -31,6 +32,9 @@ export function TenantLayout() {
       window.removeEventListener("keydown", onKey);
     };
   }, [setOnline, setCommandOpen]);
+
+  // Super Admin subdomain is platform-only — never show shop POS here.
+  if (isSuperAdminHost()) return <Navigate to="/admin" replace />;
 
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
   if (user.role === "super_admin") return <Navigate to="/admin" replace />;

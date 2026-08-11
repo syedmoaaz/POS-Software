@@ -1,15 +1,19 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/stores/auth-store";
+import { isSuperAdminHost } from "@/lib/host";
 
 export function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
-  const [email, setEmail] = useState("owner@karachimart.demo");
+  const superAdminPortal = isSuperAdminHost();
+  const [email, setEmail] = useState(
+    superAdminPortal ? "admin@megamodern.solutions" : "owner@karachimart.demo",
+  );
   const [password, setPassword] = useState("demo1234");
   const [loading, setLoading] = useState(false);
 
@@ -22,15 +26,26 @@ export function LoginPage() {
       toast.error(result.message);
       return;
     }
-    toast.success("Welcome back");
     const user = useAuthStore.getState().user;
+    if (superAdminPortal && user?.role !== "super_admin") {
+      useAuthStore.getState().logout();
+      toast.error("Use a Super Admin account on this portal");
+      return;
+    }
+    toast.success("Welcome back");
     navigate(user?.role === "super_admin" ? "/admin" : "/dashboard");
   };
 
   return (
-    <AuthShell>
-      <h1 className="text-2xl font-extrabold text-ink">Sign in</h1>
-      <p className="mt-1 text-sm text-ink-muted">Access your Mega Modern Solutions POS workspace.</p>
+    <AuthShell superAdmin={superAdminPortal}>
+      <h1 className="text-2xl font-extrabold text-ink">
+        {superAdminPortal ? "Super Admin sign in" : "Sign in"}
+      </h1>
+      <p className="mt-1 text-sm text-ink-muted">
+        {superAdminPortal
+          ? "Platform console for tenants, plans, and subscriptions."
+          : "Access your Mega Modern Solutions POS workspace."}
+      </p>
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
@@ -50,18 +65,20 @@ export function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
-      <div className="mt-4 flex flex-wrap gap-3 text-sm">
-        <Link className="font-semibold text-brand hover:underline" to="/login/pin">
-          PIN login
-        </Link>
-        <Link className="text-ink-muted hover:underline" to="/forgot-password">
-          Forgot password
-        </Link>
-        <Link className="text-ink-muted hover:underline" to="/onboarding">
-          New business setup
-        </Link>
-      </div>
-      <DemoAccounts />
+      {!superAdminPortal && (
+        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <Link className="font-semibold text-brand hover:underline" to="/login/pin">
+            PIN login
+          </Link>
+          <Link className="text-ink-muted hover:underline" to="/forgot-password">
+            Forgot password
+          </Link>
+          <Link className="text-ink-muted hover:underline" to="/onboarding">
+            New business setup
+          </Link>
+        </div>
+      )}
+      <DemoAccounts superAdminOnly={superAdminPortal} />
     </AuthShell>
   );
 }
@@ -70,6 +87,8 @@ export function PinLoginPage() {
   const loginWithPin = useAuthStore((s) => s.loginWithPin);
   const navigate = useNavigate();
   const [pin, setPin] = useState("1234");
+
+  if (isSuperAdminHost()) return <Navigate to="/login" replace />;
 
   return (
     <AuthShell>
@@ -258,7 +277,15 @@ export function OnboardingPage() {
   );
 }
 
-function AuthShell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+function AuthShell({
+  children,
+  wide,
+  superAdmin,
+}: {
+  children: React.ReactNode;
+  wide?: boolean;
+  superAdmin?: boolean;
+}) {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,#FDECEC,transparent_40%),radial-gradient(circle_at_bottom_right,#F7F7F7,transparent_45%)] px-4 py-10">
       <div className={`w-full ${wide ? "max-w-xl" : "max-w-md"} rounded-xl border border-border bg-white p-6 shadow-sm`}>
@@ -266,7 +293,9 @@ function AuthShell({ children, wide }: { children: React.ReactNode; wide?: boole
           <img src="/logo.jpeg" alt="Mega Modern Solutions" className="h-14 w-14 object-contain" />
           <div>
             <div className="text-lg font-extrabold tracking-wide text-brand">MEGA MODERN</div>
-            <div className="text-xs font-semibold tracking-[0.22em] text-ink-muted">SOLUTIONS POS</div>
+            <div className="text-xs font-semibold tracking-[0.22em] text-ink-muted">
+              {superAdmin ? "SUPER ADMIN" : "SOLUTIONS POS"}
+            </div>
           </div>
         </div>
         {children}
@@ -275,13 +304,19 @@ function AuthShell({ children, wide }: { children: React.ReactNode; wide?: boole
   );
 }
 
-function DemoAccounts() {
+function DemoAccounts({ superAdminOnly }: { superAdminOnly?: boolean }) {
   return (
     <div className="mt-6 rounded-md border border-dashed border-border bg-surface-subtle p-3 text-xs text-ink-muted">
       <div className="font-bold text-ink">Demo accounts</div>
-      <p className="mt-1">owner@karachimart.demo / demo1234</p>
-      <p>cashier@karachimart.demo / demo1234 · PIN 1234</p>
-      <p>admin@megamodern.solutions / demo1234</p>
+      {superAdminOnly ? (
+        <p className="mt-1">admin@megamodern.solutions / demo1234</p>
+      ) : (
+        <>
+          <p className="mt-1">owner@karachimart.demo / demo1234</p>
+          <p>cashier@karachimart.demo / demo1234 · PIN 1234</p>
+          <p>admin@megamodern.solutions / demo1234</p>
+        </>
+      )}
     </div>
   );
 }

@@ -55,6 +55,19 @@ VITE_API_URL=https://your-api.up.railway.app
 3. SPA rewrites are in `apps/web/vercel.json` (`/(.*) → /index.html`).
 4. Ensure API `CORS_ORIGIN` includes the Vercel domain (preview + production).
 
+### Super Admin subdomain
+
+Point `superadmin.yourdomain.com` at the **same** Vercel project as the shop app (same build). The web app detects hosts starting with `superadmin.` and serves only the Super Admin portal (`/` → `/admin`).
+
+| Host | Portal |
+|---|---|
+| `app.yourdomain.com` / `pos.yourdomain.com` | Shop POS |
+| `superadmin.yourdomain.com` | Platform Super Admin |
+
+Local: open `http://superadmin.localhost:5173` (or set `VITE_PORTAL=superadmin`).
+
+Add both production hosts to API `CORS_ORIGIN` (comma-separated if your API supports a list).
+
 ## 4. Print bridge (in-store)
 
 ```bash

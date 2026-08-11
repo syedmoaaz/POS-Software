@@ -3,6 +3,7 @@ import { ADMIN_NAV } from "@/app/nav";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isSuperAdminHost } from "@/lib/host";
 
 export function AdminLayout() {
   const user = useAuthStore((s) => s.user);
@@ -10,7 +11,9 @@ export function AdminLayout() {
   const logout = useAuthStore((s) => s.logout);
 
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
-  if (user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
+  if (user.role !== "super_admin") {
+    return <Navigate to={isSuperAdminHost() ? "/login" : "/dashboard"} replace />;
+  }
 
   return (
     <div className="flex min-h-screen bg-surface-subtle">
