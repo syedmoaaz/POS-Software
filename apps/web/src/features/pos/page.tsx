@@ -69,9 +69,17 @@ export function PosPage() {
   const deleteHeld = useCartStore((s) => s.deleteHeld);
   const clearCart = useCartStore((s) => s.clearCart);
   const setLinePrice = useCartStore((s) => s.setLinePrice);
-  const totals = useCartStore((s) => s.totals());
+  const taxRateBps = useCartStore((s) => s.taxRateBps);
+  const computeTotals = useCartStore((s) => s.totals);
   const completed = useCartStore((s) => s.completed);
   const lastSale = completed.find((c) => c.id === lastReceiptId) ?? completed[0];
+
+  // Don't call totals() inside the Zustand selector — it returns a new object
+  // every time and can infinite-loop / blank the POS page.
+  const totals = useMemo(
+    () => computeTotals(),
+    [computeTotals, lines, cartDiscountMinor, taxRateBps],
+  );
 
   const filtered = useMemo(() => {
     return PRODUCTS.filter((p) => {
@@ -407,10 +415,10 @@ export function PosPage() {
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         totalMinor={totals.totalMinor}
-        receiptPrefix={online ? register.code : "OFF"}
+        receiptPrefix={online ? (register?.code ?? "POS") : "OFF"}
         customerName={CUSTOMERS.find((c) => c.id === customerId)?.name ?? "Walk-in Customer"}
         branchId={branchId}
-        registerId={register.id}
+        registerId={register?.id ?? ""}
         customerId={customerId}
         note={note}
         cartDiscountMinor={cartDiscountMinor}
