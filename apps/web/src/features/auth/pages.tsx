@@ -11,10 +11,8 @@ export function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
   const superAdminPortal = isSuperAdminHost();
-  const [email, setEmail] = useState(
-    superAdminPortal ? "admin@megamodern.solutions" : "owner@karachimart.demo",
-  );
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -86,7 +84,7 @@ export function LoginPage() {
 export function PinLoginPage() {
   const loginWithPin = useAuthStore((s) => s.loginWithPin);
   const navigate = useNavigate();
-  const [pin, setPin] = useState("1234");
+  const [pin, setPin] = useState("");
 
   if (isSuperAdminHost()) return <Navigate to="/login" replace />;
 
