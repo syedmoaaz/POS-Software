@@ -14,7 +14,7 @@ const envSchema = z.object({
     .string()
     .min(1)
     .default("mongodb://127.0.0.1:27017/mega_modern_pos"),
-  CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:5174"),
+  CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:5174,http://localhost:5175"),
   COOKIE_DOMAIN: z.string().optional(),
   ACCESS_TOKEN_SECRET: z.string().min(16).default("dev-access-secret-change-me"),
   REFRESH_TOKEN_SECRET: z.string().min(16).default("dev-refresh-secret-change-me"),

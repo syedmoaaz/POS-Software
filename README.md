@@ -35,7 +35,7 @@ cp .env.example .env
 # start MongoDB locally, then:
 pnpm seed
 pnpm dev:api      # http://localhost:4000
-pnpm dev:web      # http://localhost:5173
+pnpm dev:web      # http://localhost:5175
 pnpm dev:bridge   # http://127.0.0.1:9100 (optional)
 ```
 
