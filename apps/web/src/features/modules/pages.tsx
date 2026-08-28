@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { formatMoney } from "@mms/shared";
 import {
@@ -11,7 +11,9 @@ import {
   SALES,
   STOCK_TRANSFERS,
   SUPPLIERS,
+  TENANT,
 } from "@/mocks/data";
+import { printReceiptInBrowser } from "@/lib/receipt-print";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useRegisterStore } from "@/stores/register-store";
@@ -511,7 +513,20 @@ export function SalesPage() {
 }
 
 export function SaleDetailPage() {
-  const sale = SALES[0];
+  const { id } = useParams();
+  const completed = useCartStore((s) => s.completed);
+  const fromCart = completed.find((c) => c.id === id);
+  const mock = SALES.find((s) => s.id === id) ?? SALES[0];
+  const sale = fromCart
+    ? {
+        receiptNo: fromCart.receiptNo,
+        customerName: fromCart.customerName,
+        cashierName: "You",
+        paymentMethod: fromCart.payments[0]?.method ?? "cash",
+        totalMinor: fromCart.totalMinor,
+        soldAt: fromCart.soldAt,
+      }
+    : mock;
   return (
     <div>
       <PageHeader
@@ -519,7 +534,71 @@ export function SaleDetailPage() {
         description={sale.customerName}
         actions={
           <>
-            <Button variant="outline" onClick={() => toast.success("Reprint queued")}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                void (async () => {
+                  try {
+                    if (fromCart) {
+                      await printReceiptInBrowser({
+                        storeName: TENANT.name,
+                        receiptNo: fromCart.receiptNo,
+                        soldAt: fromCart.soldAt,
+                        customerName: fromCart.customerName,
+                        items: fromCart.lines.map((l) => ({
+                          name: l.name,
+                          qty: l.qty,
+                          unitPriceMinor: l.unitPriceMinor,
+                          discountMinor: l.discountMinor,
+                          lineTotalMinor: Math.max(
+                            0,
+                            Math.round(l.unitPriceMinor * l.qty) - l.discountMinor,
+                          ),
+                        })),
+                        totals: {
+                          subtotalMinor: fromCart.subtotalMinor,
+                          discountMinor: fromCart.discountMinor,
+                          taxMinor: fromCart.taxMinor,
+                          totalMinor: fromCart.totalMinor,
+                          changeMinor: fromCart.changeMinor,
+                        },
+                        payments: fromCart.payments.map((p) => ({
+                          method: p.method,
+                          amountMinor: p.amountMinor,
+                        })),
+                        logoUrl: TENANT.logoUrl,
+                      });
+                      return;
+                    }
+                    await printReceiptInBrowser({
+                      storeName: TENANT.name,
+                      receiptNo: sale.receiptNo,
+                      soldAt: sale.soldAt,
+                      customerName: sale.customerName,
+                      items: [
+                        {
+                          name: "Sale total",
+                          qty: 1,
+                          unitPriceMinor: sale.totalMinor,
+                          lineTotalMinor: sale.totalMinor,
+                        },
+                      ],
+                      totals: {
+                        subtotalMinor: sale.totalMinor,
+                        discountMinor: 0,
+                        taxMinor: 0,
+                        totalMinor: sale.totalMinor,
+                        changeMinor: 0,
+                      },
+                      payments: [{ method: sale.paymentMethod, amountMinor: sale.totalMinor }],
+                      logoUrl: TENANT.logoUrl,
+                    });
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Could not print receipt");
+                  }
+                })();
+              }}
+            >
               Reprint
             </Button>
             <Button asChild>

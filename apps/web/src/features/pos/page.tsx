@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { formatMoney, type PaymentMethod } from "@mms/shared";
-import { CATEGORIES, CUSTOMERS, PRODUCTS, type Product } from "@/mocks/data";
+import { BRANCHES, CATEGORIES, CUSTOMERS, PRODUCTS, TENANT, type Product } from "@/mocks/data";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useActiveRegister, useBranchStore } from "@/stores/branch-store";
@@ -21,6 +21,7 @@ import { useUiStore } from "@/stores/ui-store";
 import { useOfflineStore } from "@/stores/offline-store";
 import { enqueueOfflineSale } from "@/lib/offline/sync-engine";
 import { bridgePrintReceipt } from "@/lib/print-bridge";
+import { getPrintMethod, printReceiptInBrowser } from "@/lib/receipt-print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -473,7 +474,7 @@ export function PosPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Sale complete</DialogTitle>
-            <DialogDescription>Receipt preview (58/80mm mock)</DialogDescription>
+            <DialogDescription>Print opens the browser printer dialog (select your thermal printer)</DialogDescription>
           </DialogHeader>
           {lastSale ? (
             <div className="rounded-md border border-border bg-white p-4 font-mono text-xs">
@@ -514,44 +515,68 @@ export function PosPage() {
             onClick={() => {
               void (async () => {
                 if (!lastSale) return;
+                const branch = BRANCHES.find((b) => b.id === branchId);
+                const receipt = {
+                  storeName: TENANT.name,
+                  storeAddress: branch?.address,
+                  registerName: register.name,
+                  receiptNo: lastSale.receiptNo,
+                  soldAt: lastSale.soldAt,
+                  customerName: lastSale.customerName,
+                  items: lastSale.lines.map((l) => ({
+                    name: l.name,
+                    qty: l.qty,
+                    unitPriceMinor: l.unitPriceMinor,
+                    discountMinor: l.discountMinor,
+                    lineTotalMinor: Math.max(
+                      0,
+                      Math.round(l.unitPriceMinor * l.qty) - l.discountMinor,
+                    ),
+                  })),
+                  totals: {
+                    subtotalMinor: lastSale.subtotalMinor,
+                    discountMinor: lastSale.discountMinor,
+                    taxMinor: lastSale.taxMinor,
+                    totalMinor: lastSale.totalMinor,
+                    changeMinor: lastSale.changeMinor,
+                  },
+                  payments: lastSale.payments.map((p) => ({
+                    method: p.method,
+                    amountMinor: p.amountMinor,
+                  })),
+                  logoUrl: TENANT.logoUrl,
+                };
                 try {
-                  const res = await bridgePrintReceipt({
-                    storeName: "Karachi Mart Demo",
-                    receiptNo: lastSale.receiptNo,
-                    soldAt: lastSale.soldAt,
-                    items: lastSale.lines.map((l) => ({
-                      name: l.name,
-                      qty: l.qty,
-                      unitPriceMinor: l.unitPriceMinor,
-                      lineTotalMinor: Math.max(
-                        0,
-                        Math.round(l.unitPriceMinor * l.qty) - l.discountMinor,
-                      ),
-                    })),
-                    totals: {
-                      subtotalMinor: lastSale.subtotalMinor,
-                      discountMinor: lastSale.discountMinor,
-                      taxMinor: lastSale.taxMinor,
-                      totalMinor: lastSale.totalMinor,
-                      changeMinor: lastSale.changeMinor,
-                    },
-                    payments: lastSale.payments.map((p) => ({
-                      method: p.method,
-                      amountMinor: p.amountMinor,
-                    })),
-                    paperWidthMm: 80,
-                  });
-                  if (!res.ok || res.data.data?.status === "failed") {
-                    throw new Error(res.data.data?.error || "Print failed");
+                  if (getPrintMethod() === "bridge") {
+                    const res = await bridgePrintReceipt({
+                      storeName: receipt.storeName,
+                      receiptNo: receipt.receiptNo,
+                      soldAt: receipt.soldAt,
+                      items: receipt.items,
+                      totals: receipt.totals,
+                      payments: receipt.payments,
+                    });
+                    if (!res.ok || res.data.data?.status === "failed") {
+                      throw new Error(res.data.data?.error || "Print failed");
+                    }
+                    toast.success("Receipt sent to print bridge");
+                    setReceiptOpen(false);
+                    return;
                   }
-                  toast.success("Receipt sent to print bridge");
+                  await printReceiptInBrowser(receipt);
                   setReceiptOpen(false);
                 } catch (err) {
-                  toast.error(
-                    err instanceof Error
-                      ? err.message
-                      : "Print bridge offline — start @mms/print-bridge",
-                  );
+                  if (getPrintMethod() === "bridge") {
+                    toast.message("Print bridge unavailable — opening printer dialog");
+                    try {
+                      await printReceiptInBrowser(receipt);
+                      setReceiptOpen(false);
+                      return;
+                    } catch {
+                      /* fall through */
+                    }
+                  }
+                  toast.error(err instanceof Error ? err.message : "Could not print receipt");
                 }
               })();
             }}

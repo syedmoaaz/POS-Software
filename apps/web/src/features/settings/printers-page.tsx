@@ -15,13 +15,22 @@ import {
   printViaBridge,
   setBridgeConfig,
 } from "@/lib/print-bridge";
+import {
+  getPaperWidthMm,
+  getPrintMethod,
+  printTestReceiptInBrowser,
+  setPaperWidthMm as persistPaperWidth,
+  setPrintMethod,
+  type PrintMethod,
+} from "@/lib/receipt-print";
 
 export function PrintersSettingsPage() {
   const branchId = useBranchStore((s) => s.branchId);
   const cfg = getBridgeConfig();
   const [url, setUrl] = useState(cfg.url);
   const [token, setToken] = useState(cfg.token);
-  const [paperWidthMm, setPaperWidthMm] = useState<58 | 80>(80);
+  const [paperWidthMm, setPaperWidthMm] = useState<58 | 80>(getPaperWidthMm);
+  const [printMethod, setPrintMethodState] = useState<PrintMethod>(getPrintMethod);
   const [bridgeOnline, setBridgeOnline] = useState<boolean | null>(null);
   const [bridgeMode, setBridgeMode] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -49,7 +58,7 @@ export function PrintersSettingsPage() {
     <div>
       <PageHeader
         title="Printers & drawer"
-        description="Local print bridge drives ESC/POS printers (58/80mm) and cash drawers."
+        description="Receipts print from the browser by default. The local bridge is optional for ESC/POS and cash drawers."
         actions={
           <Button variant="outline" onClick={() => void refreshBridge()}>
             Refresh bridge
@@ -82,11 +91,30 @@ export function PrintersSettingsPage() {
               <Input value={token} onChange={(e) => setToken(e.target.value)} />
             </div>
             <div>
+              <div className="mb-1 text-xs font-semibold text-ink-muted">Print method</div>
+              <select
+                className="h-10 w-full rounded-md border border-border px-2 text-sm"
+                value={printMethod}
+                onChange={(e) => {
+                  const next = e.target.value as PrintMethod;
+                  setPrintMethodState(next);
+                  setPrintMethod(next);
+                }}
+              >
+                <option value="browser">Browser (Windows print dialog)</option>
+                <option value="bridge">Print bridge (localhost:9100)</option>
+              </select>
+            </div>
+            <div>
               <div className="mb-1 text-xs font-semibold text-ink-muted">Paper width</div>
               <select
                 className="h-10 w-full rounded-md border border-border px-2 text-sm"
                 value={paperWidthMm}
-                onChange={(e) => setPaperWidthMm(Number(e.target.value) as 58 | 80)}
+                onChange={(e) => {
+                  const next = Number(e.target.value) as 58 | 80;
+                  setPaperWidthMm(next);
+                  persistPaperWidth(next);
+                }}
               >
                 <option value={80}>80 mm</option>
                 <option value={58}>58 mm</option>
@@ -119,6 +147,12 @@ export function PrintersSettingsPage() {
                 void (async () => {
                   setBusy(true);
                   try {
+                    persistPaperWidth(paperWidthMm);
+                    setPrintMethod(printMethod);
+                    if (printMethod === "browser") {
+                      await printTestReceiptInBrowser(paperWidthMm);
+                      return;
+                    }
                     setBridgeConfig({ url, token });
                     try {
                       await printViaBridge({
@@ -172,8 +206,8 @@ export function PrintersSettingsPage() {
               Open cash drawer
             </Button>
             <p className="text-xs text-ink-muted">
-              In simulate mode, jobs are written as `.bin` ESC/POS files under the bridge `.output` folder. Use network
-              mode for a real TCP printer.
+              Browser print: in the dialog choose your thermal printer, paper size 80mm/58mm, and turn off headers and
+              footers. Cash drawer still needs the local print bridge.
             </p>
           </CardContent>
         </Card>
