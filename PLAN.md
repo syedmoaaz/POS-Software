@@ -1,4 +1,4 @@
-# Mega Modern Solutions POS — Development Plan (Phase 0)
+# Master Solutions POS — Development Plan (Phase 0)
 
 **Repository status:** Empty greenfield. No existing code to migrate.  
 **Current gate:** Frontend prototype (Phases 1–4) ready for review. Backend paused until approval.
@@ -27,7 +27,7 @@
 | Auth | JWT in HTTP-only cookies; Argon2id |
 | Media | Cloudinary first (S3-compatible adapter later) |
 | UI | shadcn/ui + Tailwind; **white + red** theme from logo (`#E00818`) |
-| Logo | `brand/mega-modern-solutions-logo.jpeg` (see `docs/brand/THEME.md`) |
+| Logo | `brand/Master Solutions Pixel Monogram Logo.png` (see `docs/brand/THEME.md`) |
 | App hosting | Web on Vercel; API on Railway |
 | Super Admin | Same `apps/web`, route prefix `/admin`, hard role separation |
 | Prototype data | MSW or in-app mock repositories with a demo role switcher |
@@ -37,7 +37,7 @@
 
 ## Locked decisions
 
-- Logo received and stored at `brand/mega-modern-solutions-logo.jpeg`
+- Logo received and stored at `brand/Master Solutions Pixel Monogram Logo.png`
 - Theme: **white + red** (brand red `#E00818`) — details in [`docs/brand/THEME.md`](docs/brand/THEME.md)
 
 ## Decisions still needing your approval

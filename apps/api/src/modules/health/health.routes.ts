@@ -11,7 +11,7 @@ healthRouter.get("/", async (_req, res) => {
 
   res.status(db === "up" ? 200 : 503).json({
     data: {
-      service: "mega-modern-pos-api",
+      service: "master-solutions-pos-api",
       status: db === "up" ? "ok" : "degraded",
       env: env.NODE_ENV,
       db,

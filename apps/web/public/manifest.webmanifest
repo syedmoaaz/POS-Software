@@ -1,6 +1,6 @@
 {
-  "name": "Mega Modern Solutions POS",
-  "short_name": "MMS POS",
+  "name": "Master Solutions POS",
+  "short_name": "MS POS",
   "description": "Retail point of sale with offline checkout support",
   "start_url": "/",
   "display": "standalone",
@@ -9,15 +9,15 @@
   "lang": "en",
   "icons": [
     {
-      "src": "/logo.jpeg",
+      "src": "/logo.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.jpeg",
+      "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

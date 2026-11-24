@@ -7,7 +7,7 @@
 
 ### Phase 1 — Design system, auth, shell
 - Monorepo: `apps/web`, `packages/shared`, pnpm workspaces
-- White + red theme (`#E00818`) + Mega Modern logo
+- White + red theme (`#E00818`) + Master Solutions logo
 - Auth: login, PIN, forgot/reset password, onboarding wizard
 - Tenant shell: sidebar, top bar, branch/register selectors, command palette (Ctrl+K), online status, role switcher
 - Super Admin shell under `/admin`

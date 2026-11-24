@@ -1,6 +1,6 @@
-/* Mega Modern Solutions POS — minimal offline shell */
+/* Master Solutions POS — minimal offline shell */
 const CACHE = "mms-pos-shell-v1";
-const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/logo.jpeg"];
+const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

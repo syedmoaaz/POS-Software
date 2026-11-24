@@ -1,6 +1,6 @@
-# Mega Modern Solutions POS — Product Architecture Overview
+# Master Solutions POS — Product Architecture Overview
 
-**Product name:** Mega Modern Solutions POS  
+**Product name:** Master Solutions POS  
 **Delivery model:** Multi-tenant SaaS for independent retail shops  
 **Stack:** TypeScript MERN (React/Vite + Express + MongoDB) monorepo  
 **Status:** Greenfield repository (empty). Planning phase only.
@@ -11,7 +11,7 @@
 
 - Sell a production-ready POS to many retail businesses with **strict tenant isolation**.
 - Support multi-branch operations, registers, inventory, purchasing, credit, and reporting.
-- Deliver a premium commercial UI aligned with the Mega Modern Solutions brand.
+- Deliver a premium commercial UI aligned with the Master Solutions brand.
 - Keep every phase **runnable and stable**; no dead UI or unfinished actions in shipped screens.
 - Build **frontend prototype with mock data first**, then backend after explicit approval.
 
@@ -125,7 +125,7 @@
 
 ## 9. Branding
 
-- Official logo: `brand/mega-modern-solutions-logo.jpeg`
+- Official logo: `brand/Master Solutions Pixel Monogram Logo.png`
 - Theme locked: **white + red** (brand red `#E00818`) — see `docs/brand/THEME.md`
 - Premium commercial POS look: dense operational screens, calm reporting screens
 - Avoid generic purple-gradient / AI-dashboard aesthetics; no default dark mode

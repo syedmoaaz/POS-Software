@@ -81,11 +81,11 @@ export function Sidebar() {
         )}
       >
         <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-          <img src="/logo.jpeg" alt="Mega Modern Solutions" className="h-10 w-10 object-contain" />
+          <img src="/logo.png" alt="Master Solutions" className="h-10 w-10 object-contain" />
           <div className="min-w-0">
-            <div className="truncate text-sm font-extrabold tracking-wide text-brand">MEGA MODERN</div>
+            <div className="truncate text-sm font-extrabold tracking-wide text-brand">MASTER SOLUTIONS</div>
             <div className="truncate text-[10px] font-semibold tracking-[0.18em] text-ink-muted">
-              SOLUTIONS POS
+              POS
             </div>
           </div>
         </div>

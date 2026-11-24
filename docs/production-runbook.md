@@ -60,4 +60,4 @@ Rollback: redeploy previous Railway/Vercel deployment; Atlas point-in-time resto
 |------|---------|
 | On-call eng | |
 | Store ops | |
-| Mega Modern Solutions admin | |
+| Master Solutions admin | |

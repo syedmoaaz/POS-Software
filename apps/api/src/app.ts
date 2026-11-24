@@ -69,7 +69,7 @@ export function createApp() {
 
   app.get("/", (_req, res) => {
     res.json({
-      name: "Mega Modern Solutions POS API",
+      name: "Master Solutions POS API",
       version: "v1",
       docs: "/api/v1/health",
     });

@@ -1,6 +1,6 @@
 # Security Checklist
 
-Use this before every production deploy of Mega Modern Solutions POS.
+Use this before every production deploy of Master Solutions POS.
 
 ## Auth & sessions
 - [ ] `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` are unique, ≥32 random chars (not repo defaults)

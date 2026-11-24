@@ -24,7 +24,7 @@ export function AdminDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Platform overview" description="Mega Modern Solutions SaaS control plane." />
+      <PageHeader title="Platform overview" description="Master Solutions SaaS control plane." />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric title="Tenants" value={String(ADMIN_TENANTS.length)} />
         <Metric title="Active" value={String(active)} />
