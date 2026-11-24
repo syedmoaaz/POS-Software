@@ -19,9 +19,9 @@ export function AdminLayout() {
     <div className="flex min-h-screen bg-surface-subtle">
       <aside className="flex w-64 flex-col border-r border-border bg-white">
         <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-          <img src="/logo.jpeg" alt="Mega Modern Solutions" className="h-10 w-10 object-contain" />
+          <img src="/logo.png" alt="Master Solutions" className="h-10 w-10 object-contain" />
           <div>
-            <div className="text-sm font-extrabold text-brand">MEGA MODERN</div>
+            <div className="text-sm font-extrabold text-brand">MASTER SOLUTIONS</div>
             <div className="text-[10px] font-semibold tracking-widest text-ink-muted">SUPER ADMIN</div>
           </div>
         </div>
@@ -47,8 +47,14 @@ export function AdminLayout() {
           })}
         </nav>
         <div className="mt-auto border-t border-border p-3">
-          <div className="mb-2 text-xs text-ink-muted">{user.email}</div>
-          <Button variant="outline" className="w-full" onClick={logout}>
+          <div className="mb-2 text-xs text-ink-muted">{user?.email}</div>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              void logout();
+            }}
+          >
             Sign out
           </Button>
         </div>

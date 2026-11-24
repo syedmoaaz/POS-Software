@@ -17,21 +17,28 @@ export function LoginPage() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const result = login(email, password);
-    setLoading(false);
-    if (!result.ok) {
-      toast.error(result.message);
-      return;
-    }
-    const user = useAuthStore.getState().user;
-    if (superAdminPortal && user?.role !== "super_admin") {
-      useAuthStore.getState().logout();
-      toast.error("Use a Super Admin account on this portal");
-      return;
-    }
-    toast.success("Welcome back");
-    navigate(user?.role === "super_admin" ? "/admin" : "/dashboard");
+    void (async () => {
+      setLoading(true);
+      try {
+        const result = await login(email, password);
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        const { useBranchStore } = await import("@/stores/branch-store");
+        useBranchStore.getState().syncFromAuth();
+        const user = useAuthStore.getState().user;
+        if (superAdminPortal && user?.role !== "super_admin") {
+          await useAuthStore.getState().logout();
+          toast.error("Use a Super Admin account on this portal");
+          return;
+        }
+        toast.success("Welcome back");
+        navigate(user?.role === "super_admin" ? "/admin" : "/dashboard");
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   return (
@@ -42,7 +49,7 @@ export function LoginPage() {
       <p className="mt-1 text-sm text-ink-muted">
         {superAdminPortal
           ? "Platform console for tenants, plans, and subscriptions."
-          : "Access your Mega Modern Solutions POS workspace."}
+          : "Access your Master Solutions POS workspace."}
       </p>
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <div className="space-y-1.5">
@@ -96,10 +103,14 @@ export function PinLoginPage() {
         className="mt-6 space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          const result = loginWithPin(pin);
-          if (!result.ok) return toast.error(result.message);
-          toast.success("PIN accepted");
-          navigate("/pos");
+          void (async () => {
+            const result = await loginWithPin(pin);
+            if (!result.ok) return toast.error(result.message);
+            const { useBranchStore } = await import("@/stores/branch-store");
+            useBranchStore.getState().syncFromAuth();
+            toast.success("PIN accepted");
+            navigate("/pos");
+          })();
         }}
       >
         <div className="space-y-1.5">
@@ -288,11 +299,11 @@ function AuthShell({
     <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,#FDECEC,transparent_40%),radial-gradient(circle_at_bottom_right,#F7F7F7,transparent_45%)] px-4 py-10">
       <div className={`w-full ${wide ? "max-w-xl" : "max-w-md"} rounded-xl border border-border bg-white p-6 shadow-sm`}>
         <div className="mb-6 flex items-center gap-3">
-          <img src="/logo.jpeg" alt="Mega Modern Solutions" className="h-14 w-14 object-contain" />
+          <img src="/logo.png" alt="Master Solutions" className="h-14 w-14 object-contain" />
           <div>
-            <div className="text-lg font-extrabold tracking-wide text-brand">MEGA MODERN</div>
+            <div className="text-lg font-extrabold tracking-wide text-brand">MASTER SOLUTIONS</div>
             <div className="text-xs font-semibold tracking-[0.22em] text-ink-muted">
-              {superAdmin ? "SUPER ADMIN" : "SOLUTIONS POS"}
+              {superAdmin ? "SUPER ADMIN" : "POS"}
             </div>
           </div>
         </div>

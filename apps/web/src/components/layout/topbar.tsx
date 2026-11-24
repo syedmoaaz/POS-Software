@@ -1,6 +1,5 @@
 import { Bell, Search, Wifi, WifiOff, LogOut, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { BRANCHES, REGISTERS } from "@/mocks/data";
 import { useAuthStore } from "@/stores/auth-store";
 import { useBranchStore } from "@/stores/branch-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -11,7 +10,8 @@ import { toast } from "sonner";
 export function Topbar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const switchRole = useAuthStore((s) => s.switchRole);
+  const branches = useAuthStore((s) => s.branches);
+  const registersAll = useAuthStore((s) => s.registers);
   const branchId = useBranchStore((s) => s.branchId);
   const registerId = useBranchStore((s) => s.registerId);
   const setBranchId = useBranchStore((s) => s.setBranchId);
@@ -20,7 +20,7 @@ export function Topbar() {
   const setCommandOpen = useUiStore((s) => s.setCommandOpen);
   const navigate = useNavigate();
 
-  const registers = REGISTERS.filter((r) => r.branchId === branchId);
+  const registers = registersAll.filter((r) => r.branchId === branchId);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-white/95 px-3 backdrop-blur md:px-4">
@@ -31,7 +31,7 @@ export function Topbar() {
           value={branchId}
           onChange={(e) => setBranchId(e.target.value)}
         >
-          {BRANCHES.map((b) => (
+          {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
             </option>
@@ -72,7 +72,10 @@ export function Topbar() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => toast.message("3 low-stock alerts", { description: "Olper's Milk, Coca-Cola, Bread" })}
+        onClick={() => {
+          navigate("/inventory/alerts");
+          toast.message("Low stock alerts");
+        }}
       >
         <Bell className="h-4 w-4" />
       </Button>
@@ -81,24 +84,16 @@ export function Topbar() {
         <UserRound className="h-4 w-4 text-brand" />
         <div className="hidden leading-tight sm:block">
           <div className="text-xs font-bold">{user?.name}</div>
-          <select
-            className="bg-transparent text-[10px] uppercase tracking-wide text-ink-muted"
-            value={user?.role}
-            onChange={(e) => switchRole(e.target.value as never)}
-            title="Demo role switcher"
-          >
-            <option value="owner">Owner</option>
-            <option value="manager">Manager</option>
-            <option value="cashier">Cashier</option>
-            <option value="inventory">Inventory</option>
-          </select>
+          <div className="text-[10px] uppercase tracking-wide text-ink-muted">{user?.role}</div>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => {
-            logout();
-            navigate("/login");
+            void (async () => {
+              await logout();
+              navigate("/login");
+            })();
           }}
         >
           <LogOut className="h-4 w-4" />

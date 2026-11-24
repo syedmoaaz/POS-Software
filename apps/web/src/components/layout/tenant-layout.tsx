@@ -4,15 +4,25 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { useAuthStore } from "@/stores/auth-store";
+import { useBranchStore } from "@/stores/branch-store";
 import { useUiStore } from "@/stores/ui-store";
 import { isSuperAdminHost } from "@/lib/host";
 
 export function TenantLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const hydrateFromSession = useAuthStore((s) => s.hydrateFromSession);
+  const syncFromAuth = useBranchStore((s) => s.syncFromAuth);
   const setOnline = useUiStore((s) => s.setOnline);
   const setCommandOpen = useUiStore((s) => s.setCommandOpen);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void (async () => {
+      await hydrateFromSession();
+      syncFromAuth();
+    })();
+  }, [hydrateFromSession, syncFromAuth]);
 
   useEffect(() => {
     const on = () => setOnline(true);
