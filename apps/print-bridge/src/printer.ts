@@ -13,6 +13,7 @@ export type PrintTarget = {
   port?: number;
 };
 
+
 export async function sendBytes(buf: Buffer, target: PrintTarget): Promise<{ mode: PrintTarget["mode"]; path?: string }> {
   if (target.mode === "network" && target.host && target.port) {
     const host = target.host;

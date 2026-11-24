@@ -3,6 +3,13 @@ import { formatMoney } from "@mms/shared";
 const PAPER_WIDTH_KEY = "mms-paper-width";
 const PRINT_METHOD_KEY = "mms-print-method";
 
+export const RECEIPT_STORE = {
+  name: "AR Mart",
+  phone: "03128740165",
+  address: "Defence View Road, Karachi",
+  poweredBy: "Software Powered by Master Solutions",
+};
+
 export type PrintMethod = "browser" | "bridge";
 
 export type ReceiptPrintItem = {
@@ -14,7 +21,8 @@ export type ReceiptPrintItem = {
 };
 
 export type ReceiptPrintInput = {
-  storeName: string;
+  storeName?: string;
+  storePhone?: string;
   storeAddress?: string;
   registerName?: string;
   receiptNo: string;
@@ -30,6 +38,7 @@ export type ReceiptPrintInput = {
   };
   payments: Array<{ method: string; amountMinor: number }>;
   footer?: string;
+  poweredBy?: string;
   logoUrl?: string;
 };
 
@@ -58,11 +67,10 @@ function esc(value: string) {
 }
 
 function buildReceiptHtml(input: ReceiptPrintInput, paperWidthMm: 58 | 80) {
-  const logoSrc = input.logoUrl
-    ? input.logoUrl.startsWith("http")
-      ? input.logoUrl
-      : `${window.location.origin}${input.logoUrl.startsWith("/") ? "" : "/"}${input.logoUrl}`
-    : `${window.location.origin}/logo.jpeg`;
+  const storeName = input.storeName || RECEIPT_STORE.name;
+  const storePhone = input.storePhone || RECEIPT_STORE.phone;
+  const storeAddress = input.storeAddress || RECEIPT_STORE.address;
+  const poweredBy = input.poweredBy || RECEIPT_STORE.poweredBy;
   const when = input.soldAt ? new Date(input.soldAt).toLocaleString() : new Date().toLocaleString();
   const itemRows = input.items
     .map((item) => {
@@ -76,8 +84,6 @@ function buildReceiptHtml(input: ReceiptPrintInput, paperWidthMm: 58 | 80) {
         `<div class="row"><span>${esc(p.method)}</span><span>${esc(formatMoney(p.amountMinor))}</span></div>`,
     )
     .join("");
-  const address = input.storeAddress ? `<div>${esc(input.storeAddress)}</div>` : "";
-  const register = input.registerName ? `<div>${esc(input.registerName)}</div>` : "";
   const customer = input.customerName ? `<div>Customer: ${esc(input.customerName)}</div>` : "";
   const discount =
     input.totals.discountMinor > 0
@@ -102,21 +108,35 @@ function buildReceiptHtml(input: ReceiptPrintInput, paperWidthMm: 58 | 80) {
         padding: 0;
         background: #fff;
         color: #000;
-        font-family: "Courier New", ui-monospace, Consolas, monospace;
-        font-size: ${paperWidthMm === 58 ? "11px" : "12px"};
-        line-height: 1.35;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: ${paperWidthMm === 58 ? "13px" : "14px"};
+        font-weight: 700;
+        line-height: 1.4;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
+        -webkit-text-stroke: 0.35px #000;
+        text-shadow: 0.25px 0 0 #000, -0.25px 0 0 #000;
       }
       .wrap { padding: 4mm 3mm 8mm; }
       .center { text-align: center; }
-      .logo { height: 48px; width: 48px; object-fit: contain; }
-      .store { font-size: ${paperWidthMm === 58 ? "13px" : "15px"}; font-weight: 800; letter-spacing: 0.02em; }
-      .row { display: flex; justify-content: space-between; gap: 8px; }
+      .store {
+        font-size: ${paperWidthMm === 58 ? "20px" : "22px"};
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        -webkit-text-stroke: 0.6px #000;
+      }
+      .phone { font-size: ${paperWidthMm === 58 ? "14px" : "16px"}; font-weight: 900; margin-top: 3px; }
+      .addr { margin-top: 2px; font-weight: 700; }
+      .row { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; }
       .row span:first-child { overflow-wrap: anywhere; }
-      .sep { border-top: 1px dashed #000; margin: 8px 0; }
-      .bold { font-weight: 700; }
-      .muted { font-size: 10px; }
+      .sep { border-top: 2px solid #000; margin: 8px 0; }
+      .bold { font-weight: 900; font-size: ${paperWidthMm === 58 ? "15px" : "16px"}; }
+      .muted { font-size: ${paperWidthMm === 58 ? "12px" : "13px"}; font-weight: 700; color: #000; }
+      .brand { margin-top: 8px; font-size: ${paperWidthMm === 58 ? "11px" : "12px"}; font-weight: 800; }
       @media print {
-        html, body { width: ${paperWidthMm}mm; }
+        html, body { width: ${paperWidthMm}mm; color: #000 !important; }
         .wrap { padding-bottom: 10mm; }
       }
     </style>
@@ -124,11 +144,10 @@ function buildReceiptHtml(input: ReceiptPrintInput, paperWidthMm: 58 | 80) {
   <body>
     <div class="wrap">
       <div class="center">
-        <img class="logo" src="${esc(logoSrc)}" alt="" onerror="this.style.display='none'" />
-        <div class="store">${esc(input.storeName)}</div>
-        ${address}
-        ${register}
-        <div class="bold" style="margin-top:6px">${esc(input.receiptNo)}</div>
+        <div class="store">${esc(storeName)}</div>
+        <div class="phone">${esc(storePhone)}</div>
+        <div class="addr">${esc(storeAddress)}</div>
+        <div class="bold" style="margin-top:8px">${esc(input.receiptNo)}</div>
         <div class="muted">${esc(when)}</div>
         ${customer}
       </div>
@@ -143,6 +162,7 @@ function buildReceiptHtml(input: ReceiptPrintInput, paperWidthMm: 58 | 80) {
       <div class="row"><span>Change</span><span>${esc(formatMoney(input.totals.changeMinor))}</span></div>
       <div class="sep"></div>
       <div class="center">${esc(input.footer ?? "Thank you for shopping with us")}</div>
+      <div class="center brand">${esc(poweredBy)}</div>
     </div>
   </body>
 </html>`;
@@ -199,9 +219,6 @@ export async function printReceiptInBrowser(input: ReceiptPrintInput, paperWidth
 export function printTestReceiptInBrowser(paperWidthMm = getPaperWidthMm()) {
   return printReceiptInBrowser(
     {
-      storeName: "Mega Modern Solutions",
-      storeAddress: "Test print",
-      registerName: "Counter 1",
       receiptNo: "TEST-000000",
       soldAt: new Date().toISOString(),
       items: [
@@ -216,7 +233,6 @@ export function printTestReceiptInBrowser(paperWidthMm = getPaperWidthMm()) {
         changeMinor: 0,
       },
       payments: [{ method: "cash", amountMinor: 15000 }],
-      footer: "Printer test page",
     },
     paperWidthMm,
   );

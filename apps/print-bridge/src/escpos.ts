@@ -57,7 +57,7 @@ export function buildReceipt(payload: ReceiptPayload): Buffer {
   push(cmd(ESC, 0x40)); // init
   push(cmd(ESC, 0x61, 0x01)); // center
   push(cmd(ESC, 0x45, 0x01)); // bold
-  push(encodeText(`${payload.storeName ?? "Mega Modern POS"}\n`));
+  push(encodeText(`${payload.storeName ?? "Master Solutions POS"}\n`));
   push(cmd(ESC, 0x45, 0x00));
   push(cmd(ESC, 0x61, 0x00)); // left
 
@@ -124,7 +124,7 @@ export function buildReceipt(payload: ReceiptPayload): Buffer {
 export function buildTestPage(paperWidthMm: 58 | 80 = 80): Buffer {
   return buildReceipt({
     paperWidthMm,
-    storeName: "Mega Modern Solutions POS",
+    storeName: "Master Solutions POS",
     lines: [
       { kind: "text", text: "PRINT BRIDGE TEST", align: "center", bold: true },
       { kind: "separator" },

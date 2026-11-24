@@ -1,6 +1,6 @@
 # Print Bridge
 
-Local ESC/POS agent for Mega Modern Solutions POS.
+Local ESC/POS agent for Master Solutions POS.
 
 Runs on `127.0.0.1` so the browser can talk to store printers/drawers that browsers cannot drive directly.
 
