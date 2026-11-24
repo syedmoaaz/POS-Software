@@ -18,3 +18,7 @@ apps/print-bridge/.output
 apps/api/scripts/login.json
 apps/api/scripts/login-out.json
 WhatsApp Image*.jpeg
+
+# Local MongoDB data (dev)
+.data/
+
