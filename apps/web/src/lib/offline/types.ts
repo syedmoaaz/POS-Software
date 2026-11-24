@@ -11,6 +11,7 @@ export type OfflineSalePayload = {
   customerName?: string;
   notes?: string;
   cartDiscountMinor?: number;
+  cartDiscountPercent?: number;
   allowNegativeStock?: boolean;
   soldAt: string;
   items: Array<{
@@ -18,6 +19,7 @@ export type OfflineSalePayload = {
     qty: number;
     unitPriceMinor?: number;
     discountMinor?: number;
+    discountPercent?: number;
     note?: string;
   }>;
   payments: Array<{
