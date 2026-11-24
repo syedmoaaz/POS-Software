@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { formatMoney } from "@mms/shared";
-import { DASHBOARD_TREND, PRODUCTS, SALES, SUPPLIERS, CUSTOMERS } from "@/mocks/data";
+import { DASHBOARD_TREND, PRODUCTS, SALES, SUPPLIERS } from "@/mocks/data";
 import { useAuthStore } from "@/stores/auth-store";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -159,21 +160,62 @@ export function PayablesReportPage() {
 }
 
 export function ReceivablesReportPage() {
+  const [rows, setRows] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone: string;
+      balanceMinor: number;
+      aging?: { current: number; d30: number; d60: number; d90: number };
+    }>
+  >([]);
+  const [totalMinor, setTotalMinor] = useState(0);
+
+  useEffect(() => {
+    void import("@/lib/domain-api").then(({ fetchReceivables }) =>
+      fetchReceivables()
+        .then((res) => {
+          setRows(res.data.rows);
+          setTotalMinor(res.data.totalMinor);
+        })
+        .catch(() => undefined),
+    );
+  }, []);
+
   return (
     <div>
-      <PageHeader title="Customer receivables" />
-      <div className="space-y-2">
-        {CUSTOMERS.filter((c) => c.balanceMinor > 0).map((c) => (
-          <Card key={c.id}>
-            <CardContent className="flex items-center justify-between pt-4">
-              <div>
-                <div className="font-semibold">{c.name}</div>
-                <div className="text-xs text-ink-muted">{c.phone}</div>
-              </div>
-              <div className="font-bold text-brand">{formatMoney(c.balanceMinor)}</div>
-            </CardContent>
-          </Card>
-        ))}
+      <PageHeader
+        title="Customer receivables"
+        description={`Outstanding ${formatMoney(totalMinor)} with aging buckets.`}
+      />
+      <div className="overflow-x-auto rounded-lg border border-border bg-white">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead className="bg-surface-subtle text-xs uppercase text-ink-muted">
+            <tr>
+              <th className="px-3 py-2 text-left">Customer</th>
+              <th className="px-3 py-2 text-right">Balance</th>
+              <th className="px-3 py-2 text-right">Current</th>
+              <th className="px-3 py-2 text-right">1–30</th>
+              <th className="px-3 py-2 text-right">31–60</th>
+              <th className="px-3 py-2 text-right">60+</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id} className="border-t border-border">
+                <td className="px-3 py-2">
+                  <div className="font-semibold">{c.name}</div>
+                  <div className="text-xs text-ink-muted">{c.phone}</div>
+                </td>
+                <td className="px-3 py-2 text-right font-bold text-brand">{formatMoney(c.balanceMinor)}</td>
+                <td className="px-3 py-2 text-right">{formatMoney(c.aging?.current ?? 0)}</td>
+                <td className="px-3 py-2 text-right">{formatMoney(c.aging?.d30 ?? 0)}</td>
+                <td className="px-3 py-2 text-right">{formatMoney(c.aging?.d60 ?? 0)}</td>
+                <td className="px-3 py-2 text-right">{formatMoney(c.aging?.d90 ?? 0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -241,8 +283,8 @@ export function SettingsSectionPage({ title }: { title: string }) {
             </div>
           ) : title === "Business profile" ? (
             <div className="flex items-center gap-3">
-              <img src="/logo.jpeg" alt="" className="h-16 w-16 object-contain" />
-              <Badge>Logo from Mega Modern Solutions</Badge>
+              <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
+              <Badge>Logo from Master Solutions</Badge>
             </div>
           ) : null}
           <Button onClick={() => toast.success(`${title} saved`)}>Save changes</Button>
