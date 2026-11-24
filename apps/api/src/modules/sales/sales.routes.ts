@@ -25,6 +25,7 @@ const checkoutSchema = z.object({
   customerName: z.string().optional(),
   notes: z.string().optional(),
   cartDiscountMinor: z.number().int().nonnegative().optional(),
+  cartDiscountPercent: z.number().min(0).max(100).optional(),
   offlineId: z.string().optional(),
   allowNegativeStock: z.boolean().optional(),
   items: z
@@ -34,11 +35,12 @@ const checkoutSchema = z.object({
         qty: z.number().positive(),
         unitPriceMinor: z.number().int().nonnegative().optional(),
         discountMinor: z.number().int().nonnegative().optional(),
+        discountPercent: z.number().min(0).max(100).optional(),
         note: z.string().optional(),
       }),
     )
     .min(1),
-  payments: z.array(paymentSchema).min(1),
+  payments: z.array(paymentSchema).min(0),
 });
 
 salesRouter.post(
@@ -47,7 +49,10 @@ salesRouter.post(
   validate({ body: checkoutSchema }),
   async (req, res, next) => {
     try {
-      if (req.body.cartDiscountMinor && !req.auth!.permissions.includes("sales.discount")) {
+      if (
+        (req.body.cartDiscountMinor || req.body.cartDiscountPercent) &&
+        !req.auth!.permissions.includes("sales.discount")
+      ) {
         throw new AppError(403, "Discount not permitted", "FORBIDDEN");
       }
       for (const item of req.body.items) {
@@ -56,6 +61,12 @@ salesRouter.post(
           !req.auth!.permissions.includes("sales.price_override")
         ) {
           throw new AppError(403, "Price override not permitted", "FORBIDDEN");
+        }
+        if (
+          (item.discountMinor || item.discountPercent) &&
+          !req.auth!.permissions.includes("sales.discount")
+        ) {
+          throw new AppError(403, "Discount not permitted", "FORBIDDEN");
         }
       }
 
@@ -69,8 +80,9 @@ salesRouter.post(
         registerId: req.body.registerId,
         idempotencyKey,
         items: req.body.items,
-        payments: req.body.payments,
+        payments: req.body.payments ?? [],
         cartDiscountMinor: req.body.cartDiscountMinor,
+        cartDiscountPercent: req.body.cartDiscountPercent,
         customerId: req.body.customerId,
         customerName: req.body.customerName,
         notes: req.body.notes,
@@ -294,6 +306,30 @@ salesRouter.get("/:id", requirePermission("sales.view"), async (req, res, next) 
       deletedAt: null,
     }).lean();
     if (!sale) throw new AppError(404, "Sale not found", "SALE_NOT_FOUND");
+
+    // Backfill barcode for older sales that predate the barcode snapshot field
+    const needsBarcode = (sale.items ?? []).some((i) => !i.barcode);
+    if (needsBarcode) {
+      const { Barcode } = await import("../../models/product.model.js");
+      const variantIds = (sale.items ?? []).map((i) => i.variantId);
+      const codes = await Barcode.find({
+        tenantId: req.auth!.tenantId,
+        variantId: { $in: variantIds },
+        deletedAt: null,
+      })
+        .sort({ isPrimary: -1 })
+        .lean();
+      const byVariant = new Map<string, string>();
+      for (const c of codes) {
+        const key = String(c.variantId);
+        if (!byVariant.has(key)) byVariant.set(key, c.code);
+      }
+      sale.items = (sale.items ?? []).map((i) => ({
+        ...i,
+        barcode: i.barcode || byVariant.get(String(i.variantId)) || "",
+      }));
+    }
+
     res.json({
       data: serializeSale(sale as never, {
         includeCost: req.auth!.permissions.includes("products.cost.view"),

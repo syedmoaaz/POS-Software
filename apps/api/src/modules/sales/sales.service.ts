@@ -1,19 +1,23 @@
 import mongoose from "mongoose";
 import { AppError } from "../../lib/errors.js";
 import { applyStockMovement, withTransaction } from "../../lib/stock.js";
+import { postCustomerLedger } from "../../lib/ledgers.js";
 import { nextSequence } from "../../models/counter.model.js";
-import { ProductVariant, Product } from "../../models/product.model.js";
+import { ProductVariant, Product, Barcode } from "../../models/product.model.js";
 import { Register } from "../../models/register.model.js";
 import { RegisterSession } from "../../models/register-session.model.js";
 import { BranchInventory } from "../../models/inventory.model.js";
 import { Sale, ReturnModel } from "../../models/sale.model.js";
 import { AuditLog } from "../../models/audit.model.js";
+import { Customer } from "../../models/customer.model.js";
+import { Tenant } from "../../models/tenant.model.js";
 
 export type CheckoutLineInput = {
   variantId: string;
   qty: number;
   unitPriceMinor?: number;
   discountMinor?: number;
+  discountPercent?: number;
   note?: string;
 };
 
@@ -33,6 +37,7 @@ export type CheckoutInput = {
   items: CheckoutLineInput[];
   payments: CheckoutPaymentInput[];
   cartDiscountMinor?: number;
+  cartDiscountPercent?: number;
   customerId?: string;
   customerName?: string;
   notes?: string;
@@ -49,7 +54,9 @@ function lineNet(unitPriceMinor: number, qty: number, discountMinor: number) {
 
 export async function checkoutSale(input: CheckoutInput) {
   if (!input.items.length) throw new AppError(400, "Cart is empty", "EMPTY_CART");
-  if (!input.payments.length) throw new AppError(400, "Payment required", "NO_PAYMENT");
+  if (!input.payments.length && !input.customerId) {
+    throw new AppError(400, "Payment required", "NO_PAYMENT");
+  }
   if (!input.idempotencyKey) {
     throw new AppError(400, "Idempotency-Key required", "IDEMPOTENCY_REQUIRED");
   }
@@ -135,15 +142,37 @@ export async function checkoutSale(input: CheckoutInput) {
         throw new AppError(400, `${product.name} below minimum price`, "MIN_PRICE");
       }
 
-      const discountMinor = line.discountMinor ?? 0;
+      const gross = Math.round(unitPriceMinor * line.qty);
+      let discountMinor = line.discountMinor ?? 0;
+      if (line.discountPercent && line.discountPercent > 0) {
+        discountMinor = Math.min(gross, Math.round((gross * line.discountPercent) / 100));
+      }
       const lineTotalMinor = lineNet(unitPriceMinor, line.qty, discountMinor);
       subtotalMinor += lineTotalMinor + discountMinor;
+
+      const attrMap =
+        variant.attributes instanceof Map
+          ? Object.fromEntries(variant.attributes)
+          : ((variant.attributes as Record<string, string> | undefined) ?? {});
+      const attrLabel = Object.entries(attrMap)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(" ");
+      const displayName = attrLabel ? `${product.name} (${attrLabel})` : product.name;
+      const primaryBc = await Barcode.findOne({
+        tenantId: input.tenantId,
+        variantId: variant._id,
+        deletedAt: null,
+      })
+        .sort({ isPrimary: -1 })
+        .session(session ?? null)
+        .lean();
 
       builtItems.push({
         variantId: variant._id,
         productId: product._id,
-        name: product.name,
+        name: displayName,
         sku: variant.sku,
+        barcode: primaryBc?.code ?? "",
         qty: line.qty,
         unitPriceMinor,
         costMinor: variant.costMinor,
@@ -155,20 +184,70 @@ export async function checkoutSale(input: CheckoutInput) {
     }
 
     const linesDiscount = builtItems.reduce((s, i) => s + i.discountMinor, 0);
-    const cartDiscountMinor = Math.min(input.cartDiscountMinor ?? 0, subtotalMinor - linesDiscount);
+    const afterLines = Math.max(0, subtotalMinor - linesDiscount);
+    let cartDiscountMinor = input.cartDiscountMinor ?? 0;
+    if (input.cartDiscountPercent && input.cartDiscountPercent > 0) {
+      cartDiscountMinor = Math.round((afterLines * input.cartDiscountPercent) / 100);
+    }
+    cartDiscountMinor = Math.min(cartDiscountMinor, afterLines);
     const discountMinor = linesDiscount + cartDiscountMinor;
     const taxable = Math.max(0, subtotalMinor - discountMinor);
     const taxMinor = 0;
     const totalMinor = taxable + taxMinor;
 
-    const paidMinor = input.payments.reduce((s, p) => s + p.amountMinor, 0);
+    const payments = [...input.payments];
+    let paidMinor = payments.reduce((s, p) => s + p.amountMinor, 0);
+
+    // Auto-charge remaining balance to customer credit when underpaid with a customer selected.
     if (paidMinor < totalMinor) {
-      throw new AppError(400, "Insufficient payment", "UNDERPAID", {
-        totalMinor,
-        paidMinor,
+      if (!input.customerId) {
+        throw new AppError(400, "Insufficient payment", "UNDERPAID", {
+          totalMinor,
+          paidMinor,
+        });
+      }
+      const tenant = await Tenant.findById(input.tenantId).session(session ?? null);
+      if (!tenant?.featureFlags?.customerCredit) {
+        throw new AppError(400, "Customer credit is disabled", "CREDIT_DISABLED");
+      }
+      const shortfall = totalMinor - paidMinor;
+      payments.push({
+        method: "customer_credit",
+        amountMinor: shortfall,
+        notes: "Auto credit for unpaid balance",
       });
+      paidMinor = totalMinor;
     }
-    const changeMinor = paidMinor - totalMinor;
+
+    const tendered = payments.reduce((s, p) => s + p.amountMinor, 0);
+    const changeMinor = Math.max(0, tendered - totalMinor);
+    paidMinor = Math.min(tendered, totalMinor);
+
+    const creditCharged = payments
+      .filter((p) => p.method === "customer_credit")
+      .reduce((s, p) => s + p.amountMinor, 0);
+    const storeCreditUsed = payments
+      .filter((p) => p.method === "store_credit")
+      .reduce((s, p) => s + p.amountMinor, 0);
+    const collectedMinor = tendered - creditCharged;
+    const paymentStatus =
+      creditCharged <= 0 ? "paid" : collectedMinor <= 0 ? "unpaid" : "partial";
+
+    if ((creditCharged > 0 || storeCreditUsed > 0) && !input.customerId) {
+      throw new AppError(400, "Customer required for credit payments", "CUSTOMER_REQUIRED");
+    }
+
+    if (input.customerId && (creditCharged > 0 || storeCreditUsed > 0)) {
+      const customer = await Customer.findOne({
+        _id: input.customerId,
+        tenantId: input.tenantId,
+        deletedAt: null,
+      }).session(session ?? null);
+      if (!customer) throw new AppError(404, "Customer not found", "CUSTOMER_NOT_FOUND");
+      if (storeCreditUsed > customer.storeCreditMinor) {
+        throw new AppError(400, "Insufficient store credit", "STORE_CREDIT_SHORT");
+      }
+    }
 
     const seq = await nextSequence(
       {
@@ -194,7 +273,7 @@ export async function checkoutSale(input: CheckoutInput) {
           customerName: input.customerName || "Walk-in Customer",
           cashierId: input.userId,
           items: builtItems,
-          payments: input.payments.map((p) => ({
+          payments: payments.map((p) => ({
             method: p.method,
             amountMinor: p.amountMinor,
             reference: p.reference ?? "",
@@ -206,7 +285,7 @@ export async function checkoutSale(input: CheckoutInput) {
           totalMinor,
           paidMinor,
           changeMinor,
-          paymentStatus: "paid",
+          paymentStatus,
           notes: input.notes ?? "",
           idempotencyKey: input.idempotencyKey,
           ...(input.offlineId ? { offlineId: input.offlineId } : {}),
@@ -240,9 +319,33 @@ export async function checkoutSale(input: CheckoutInput) {
       });
     }
 
-    const cashPaid = input.payments
-      .filter((p) => p.method === "cash")
-      .reduce((s, p) => s + p.amountMinor, 0);
+    if (input.customerId && creditCharged > 0) {
+      await postCustomerLedger({
+        tenantId: input.tenantId,
+        customerId: input.customerId,
+        type: "sale",
+        amountMinor: creditCharged,
+        createdBy: input.userId,
+        note: `Sale ${receiptNo}`,
+        refType: "sale",
+        refId: String(created._id),
+        session,
+        enforceCreditLimit: true,
+      });
+    }
+
+    if (input.customerId && storeCreditUsed > 0) {
+      const customer = await Customer.findOne({
+        _id: input.customerId,
+        tenantId: input.tenantId,
+      }).session(session ?? null);
+      if (customer) {
+        customer.storeCreditMinor = Math.max(0, customer.storeCreditMinor - storeCreditUsed);
+        await customer.save(session ? { session } : undefined);
+      }
+    }
+
+    const cashPaid = payments.filter((p) => p.method === "cash").reduce((s, p) => s + p.amountMinor, 0);
     if (cashPaid > 0) {
       const cashKept = Math.max(0, cashPaid - changeMinor);
       sessionDoc.cashSalesMinor += cashKept;
@@ -420,6 +523,7 @@ export function serializeSale(sale: {
     variantId: { toString(): string };
     name: string;
     sku: string;
+    barcode?: string;
     qty: number;
     unitPriceMinor: number;
     discountMinor: number;
@@ -453,6 +557,7 @@ export function serializeSale(sale: {
       variantId: String(i.variantId),
       name: i.name,
       sku: i.sku,
+      barcode: i.barcode || "",
       qty: i.qty,
       unitPriceMinor: i.unitPriceMinor,
       discountMinor: i.discountMinor,

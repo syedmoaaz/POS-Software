@@ -6,6 +6,7 @@ const saleItemSchema = new Schema(
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
     name: { type: String, required: true },
     sku: { type: String, required: true },
+    barcode: { type: String, default: "" },
     qty: { type: Number, required: true },
     unitPriceMinor: { type: Number, required: true },
     costMinor: { type: Number, required: true, default: 0 },
