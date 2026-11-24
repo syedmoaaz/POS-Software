@@ -11,7 +11,6 @@ import {
   SALES,
   STOCK_TRANSFERS,
   SUPPLIERS,
-  TENANT,
 } from "@/mocks/data";
 import { printReceiptInBrowser } from "@/lib/receipt-print";
 import { useAuthStore } from "@/stores/auth-store";
@@ -541,7 +540,6 @@ export function SaleDetailPage() {
                   try {
                     if (fromCart) {
                       await printReceiptInBrowser({
-                        storeName: TENANT.name,
                         receiptNo: fromCart.receiptNo,
                         soldAt: fromCart.soldAt,
                         customerName: fromCart.customerName,
@@ -566,12 +564,10 @@ export function SaleDetailPage() {
                           method: p.method,
                           amountMinor: p.amountMinor,
                         })),
-                        logoUrl: TENANT.logoUrl,
                       });
                       return;
                     }
                     await printReceiptInBrowser({
-                      storeName: TENANT.name,
                       receiptNo: sale.receiptNo,
                       soldAt: sale.soldAt,
                       customerName: sale.customerName,
@@ -591,7 +587,6 @@ export function SaleDetailPage() {
                         changeMinor: 0,
                       },
                       payments: [{ method: sale.paymentMethod, amountMinor: sale.totalMinor }],
-                      logoUrl: TENANT.logoUrl,
                     });
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : "Could not print receipt");
