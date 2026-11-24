@@ -58,7 +58,7 @@ export function PrintersSettingsPage() {
     <div>
       <PageHeader
         title="Printers & drawer"
-        description="Receipts print from the browser by default. The local bridge is optional for ESC/POS and cash drawers."
+        description="Receipts print from the browser by default. If the cash drawer is wired to the thermal printer, it opens with the receipt — no bridge needed."
         actions={
           <Button variant="outline" onClick={() => void refreshBridge()}>
             Refresh bridge
@@ -206,8 +206,9 @@ export function PrintersSettingsPage() {
               Open cash drawer
             </Button>
             <p className="text-xs text-ink-muted">
-              Browser print: in the dialog choose your thermal printer, paper size 80mm/58mm, and turn off headers and
-              footers. Cash drawer still needs the local print bridge.
+              Browser print: choose your thermal printer, paper size 80mm/58mm, and turn off headers/footers. A
+              printer-wired cash drawer opens automatically with that print. Use Open cash drawer (or the local bridge)
+              only when you need a kick without printing.
             </p>
           </CardContent>
         </Card>
