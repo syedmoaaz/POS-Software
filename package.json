@@ -14,6 +14,7 @@
     "test": "pnpm --filter @mms/shared test && pnpm --filter @mms/api test",
     "load:checkout": "node scripts/checkout-load.mjs",
     "seed": "pnpm --filter @mms/api seed",
+    "seed:shoes": "pnpm --filter @mms/api exec tsx src/db/seed-shoe-shop.ts",
     "preview": "pnpm --filter @mms/web preview"
   },
   "engines": {
