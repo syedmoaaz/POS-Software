@@ -693,25 +693,76 @@ reportsRouter.get(
   requirePermission("reports.sales"),
   async (req, res, next) => {
     try {
+      const tenantId = req.auth!.tenantId!;
       const rows = await Customer.find({
-        tenantId: req.auth!.tenantId,
+        tenantId,
         deletedAt: null,
         balanceMinor: { $gt: 0 },
       })
         .sort({ balanceMinor: -1 })
         .lean();
 
+      const now = new Date();
+      const d30 = new Date(now);
+      d30.setDate(d30.getDate() - 30);
+      const d60 = new Date(now);
+      d60.setDate(d60.getDate() - 60);
+      const d90 = new Date(now);
+      d90.setDate(d90.getDate() - 90);
+
+      const creditSales = await Sale.find({
+        tenantId,
+        deletedAt: null,
+        customerId: { $in: rows.map((r) => r._id) },
+        paymentStatus: { $in: ["partial", "unpaid"] },
+      })
+        .select({ customerId: 1, totalMinor: 1, paidMinor: 1, soldAt: 1, payments: 1 })
+        .lean();
+
+      const agingByCustomer = new Map<
+        string,
+        { current: number; d30: number; d60: number; d90: number }
+      >();
+      for (const sale of creditSales) {
+        const cid = String(sale.customerId);
+        const creditOnSale =
+          (sale.payments ?? [])
+            .filter((p) => p.method === "customer_credit")
+            .reduce((s, p) => s + p.amountMinor, 0) ||
+          Math.max(0, (sale.totalMinor ?? 0) - (sale.paidMinor ?? 0));
+        if (creditOnSale <= 0) continue;
+        const bucket = agingByCustomer.get(cid) ?? { current: 0, d30: 0, d60: 0, d90: 0 };
+        const soldAt = sale.soldAt ? new Date(sale.soldAt) : now;
+        if (soldAt >= d30) bucket.current += creditOnSale;
+        else if (soldAt >= d60) bucket.d30 += creditOnSale;
+        else if (soldAt >= d90) bucket.d60 += creditOnSale;
+        else bucket.d90 += creditOnSale;
+        agingByCustomer.set(cid, bucket);
+      }
+
       res.json({
         data: {
           totalMinor: rows.reduce((s, r) => s + r.balanceMinor, 0),
-          rows: rows.map((c) => ({
-            id: String(c._id),
-            name: c.name,
-            phone: c.phone,
-            group: c.group,
-            balanceMinor: c.balanceMinor,
-            creditLimitMinor: c.creditLimitMinor,
-          })),
+          rows: rows.map((c) => {
+            const aging = agingByCustomer.get(String(c._id)) ?? {
+              current: c.balanceMinor,
+              d30: 0,
+              d60: 0,
+              d90: 0,
+            };
+            // If no credit-sale breakdown, put full balance in current.
+            const agedSum = aging.current + aging.d30 + aging.d60 + aging.d90;
+            if (agedSum === 0 && c.balanceMinor > 0) aging.current = c.balanceMinor;
+            return {
+              id: String(c._id),
+              name: c.name,
+              phone: c.phone,
+              group: c.group,
+              balanceMinor: c.balanceMinor,
+              creditLimitMinor: c.creditLimitMinor,
+              aging,
+            };
+          }),
         },
       });
     } catch (err) {
